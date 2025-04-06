@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Library</title>
+    <link rel="stylesheet" href="style.css">
+    
+</head>
+
+<body>
+    <div id="initial-ui" class="container">
+        <h1 style="text-align: center;">Book Library</h1>
+        <div class="form-group" style="align-items: center; gap: 10px;">
+            <label for="book-count" style="margin: 0;">How many Books ?</label>
+            <input type="number" id="book-count" min="1"  style="width: 50%;" placeholder="Enter Books no." required>
+            <button id="submit-count" style="margin-left: 0%;">ok</button>
+        </div>
+        <div id="book-count-error" class="error"></div>
+    </div>
+        
+
+    <div id="book-form-ui" class="container hidden">
+        <h2 style="text-align: center;" > Book Library </h2>
+        <form id="book-form">
+            <div class="form-group">
+                <label for="book-name">Book Name:</label>
+                <br>
+                <input type="text" id="book-name" placeholder="Enter Book Name" required>
+                <div id="book-name-error" class="error"></div>
+            </div>
+            <div class="form-group">
+                <label for="book-price">Price:</label>
+                <br>    
+                <input type="number" id="book-price" min="0" step="0.01" placeholder="Book Price" required>
+                <div id="book-price-error" class="error"></div>
+            </div>
+            <div class="form-group">
+                <label for="author-name">Author Name:</label>
+                <br>
+                <input type="text" id="author-name" placeholder="Enter Author Name" required>
+                <div id="author-name-error" class="error"></div>
+            </div>
+            <div class="form-group">
+                <label for="author-email">Author E-mail:</label>
+                <br>
+                <input type="email" id="author-email" placeholder="Enter Author E-mail" required>
+                <div id="author-email-error" class="error"></div>
+            </div>
+            <button style="text-align: center;"  type="submit" id="save-book">Add Book</button>
+        </form>
+    </div>
+
+    <div id="books-table-ui" class="container hidden">
+        <h2>Books List</h2>
+        <table id="books-table">
+            <thead>
+                <tr>
+                    <th>Book Name</th>
+                    <th>Price</th>
+                    <th>Author</th>
+                    <th>Author Email</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="books-table-body">
+                <!-- Books will be added here dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Function constructors
+        function Author(name, email) {
+            this.name = name;
+            this.email = email;
+        }
+
+        function Book(name, price, author) {
+            this.name = name;
+            this.price = price;
+            this.author = author;
+        }
+
+        // DOM elements
+        const initialUI = document.getElementById('initial-ui');
+        const bookFormUI = document.getElementById('book-form-ui');
+        const booksTableUI = document.getElementById('books-table-ui');
+        const bookCountInput = document.getElementById('book-count');
+        const bookCountError = document.getElementById('book-count-error');
+        const bookForm = document.getElementById('book-form');
+        const booksTableBody = document.getElementById('books-table-body');
+
+        // Variables
+        let books = [];
+        let currentBookIndex = 0;
+        let totalBooksToEnter = 0;
+        let editingIndex = -1;
+
+        // Event listeners
+        document.getElementById('submit-count').addEventListener('click', handleBookCountSubmit);
+        bookForm.addEventListener('submit', handleBookFormSubmit);
+
+        // Functions
+        function handleBookCountSubmit() {
+            const count = parseInt(bookCountInput.value);
+
+            if (isNaN(count) || count < 1) {
+                bookCountError.textContent = 'Please enter a valid number greater than 0';
+                return;
+            }
+
+            totalBooksToEnter = count;
+            currentBookIndex = 0;
+
+            initialUI.classList.add('hidden');
+            bookFormUI.classList.remove('hidden');
+
+            bookCountError.textContent = '';
+        }
+
+        function handleBookFormSubmit(e) {
+            e.preventDefault();
+
+            // Get form values
+            const bookName = document.getElementById('book-name').value.trim();
+            const bookPrice = parseFloat(document.getElementById('book-price').value);
+            const authorName = document.getElementById('author-name').value.trim();
+            const authorEmail = document.getElementById('author-email').value.trim();
+
+            // Validation
+            let isValid = true;
+
+            if (!bookName) {
+                document.getElementById('book-name-error').textContent = 'Book name is required';
+                isValid = false;
+            } else {
+                document.getElementById('book-name-error').textContent = '';
+            }
+
+            if (isNaN(bookPrice)) {
+                document.getElementById('book-price-error').textContent = 'Price must be a number';
+                isValid = false;
+            } else if (bookPrice < 0) {
+                document.getElementById('book-price-error').textContent = 'Price cannot be negative';
+                isValid = false;
+            } else {
+                document.getElementById('book-price-error').textContent = '';
+            }
+
+            if (!authorName) {
+                document.getElementById('author-name-error').textContent = 'Author name is required';
+                isValid = false;
+            } else {
+                document.getElementById('author-name-error').textContent = '';
+            }
+
+            if (!authorEmail) {
+                document.getElementById('author-email-error').textContent = 'Author email is required';
+                isValid = false;
+            } else if (!validateEmail(authorEmail)) {
+                document.getElementById('author-email-error').textContent = 'Please enter a valid email';
+                isValid = false;
+            } else {
+                document.getElementById('author-email-error').textContent = '';
+            }
+
+            if (!isValid) return;
+
+            // Create author and book objects
+            const author = new Author(authorName, authorEmail);
+            const book = new Book(bookName, bookPrice, author);
+
+            if (editingIndex >= 0) {
+                // Update existing book
+                books[editingIndex] = book;
+                editingIndex = -1;
+            } else {
+                // Add new book
+                books.push(book);
+                currentBookIndex++;
+            }
+
+            // Check if we've entered all books
+            if (currentBookIndex >= totalBooksToEnter && editingIndex === -1) {
+                bookFormUI.classList.add('hidden');
+                booksTableUI.classList.remove('hidden');
+                renderBooksTable();
+            } else {
+                resetForm();
+            }
+        }
+
+        function resetForm() {
+            bookForm.reset();
+            document.querySelectorAll('.error').forEach(el => el.textContent = '');
+
+            if (editingIndex >= 0) {
+                editingIndex = -1;
+                bookFormUI.classList.add('hidden');
+                booksTableUI.classList.remove('hidden');
+                renderBooksTable();
+            }
+        }
+
+        function renderBooksTable() {
+            booksTableBody.innerHTML = '';
+
+            books.forEach((book, index) => {
+                const row = document.createElement('tr');
+                row.dataset.index = index;
+
+                row.innerHTML = `
+                    <td>${book.name}</td>
+                    <td>${book.price.toFixed(2)}</td>
+                    <td>${book.author.name}</td>
+                    <td>${book.author.email}</td>
+                    <td>
+                        <button style="margin-left:0%" class="edit-btn" data-index="${index}">Edit</button>
+                        <button style="margin-left:0%" class="delete-btn" data-index="${index}">Delete</button>
+                    </td>
+                `;
+
+                booksTableBody.appendChild(row);
+            });
+
+            // Add event listeners to edit and delete buttons
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', handleEditBook);
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', handleDeleteBook);
+            });
+        }
+
+        function handleEditBook(e) {
+            const index = parseInt(e.target.dataset.index);
+            const book = books[index];
+
+            // Fill the form with book data
+            document.getElementById('book-name').value = book.name;
+            document.getElementById('book-price').value = book.price;
+            document.getElementById('author-name').value = book.author.name;
+            document.getElementById('author-email').value = book.author.email;
+
+            editingIndex = index;
+
+            booksTableUI.classList.add('hidden');
+            bookFormUI.classList.remove('hidden');
+        }
+
+        function handleDeleteBook(e) {
+            const index = parseInt(e.target.dataset.index);
+
+            if (confirm('Are you sure you want to delete this book?')) {
+                books.splice(index, 1);
+                totalBooksToEnter--;
+
+                if (books.length === 0) {
+                    booksTableUI.classList.add('hidden');
+                    initialUI.classList.remove('hidden');
+                } else {
+                    renderBooksTable();
+                }
+            }
+        }
+
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+    </script>
+</body>
+
+</html>
